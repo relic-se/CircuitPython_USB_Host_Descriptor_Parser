@@ -24,14 +24,11 @@ Table of Contents
 .. toctree::
     :caption: Tutorials
 
-.. todo:: Add any Learn guide links here. If there are none, then simply delete this todo and leave
-    the toctree above for use later.
-
 .. toctree::
     :caption: Related Products
 
-.. todo:: Add any product links here. If there are none, then simply delete this todo and leave
-    the toctree above for use later.
+    Adafruit Fruit Jam - Mini RP2350 Computer <https://www.adafruit.com/product/6200>
+    Adafruit Feather RP2040 with USB Type A Host <https://www.adafruit.com/product/5723>
 
 .. toctree::
     :caption: Other Links
