@@ -39,6 +39,17 @@ import usb.core
 
 
 class Descriptor:
+    """The base class of a descriptor parser. Validates descriptor data length and type. The
+    constructor will throw a `ValueError` exception if the data is invalid.
+
+    :param descriptor: The descriptor data to validate.
+    :type descriptor: `bytearray`
+    :param length: The length of the descriptor data.
+    :type length: `int`, optional
+    :param descriptor_type: The type of the descriptor data.
+    :type descriptor_type: `int`, optional
+    """
+
     def __init__(self, descriptor: bytearray, length: int = None, descriptor_type: int = None):
         if (
             (length is not None and len(descriptor) != length)
@@ -49,6 +60,13 @@ class Descriptor:
 
 
 class EndpointDescriptor(Descriptor):
+    """Parse the provided endpoint descriptor. This class should only be instantiated by
+    :class:`ConfigurationDescriptor`.
+
+    :param descriptor: The endpoint descriptor data to parse.
+    :type descriptor: `bytearray`
+    """
+
     def __init__(self, descriptor: bytearray):
         super().__init__(descriptor, 7, adafruit_usb_host_descriptors.DESC_ENDPOINT)
         self._address = descriptor[2]
@@ -58,26 +76,35 @@ class EndpointDescriptor(Descriptor):
 
     @property
     def address(self) -> int:
+        """The endpoint address."""
         return self._address
 
     @property
     def attributes(self) -> int:
+        """The attributes of the endpoint."""
         return self._attributes
 
     @property
     def max_packet_size(self) -> int:
+        """The maximum expected packet size of a report from the endpoint in bytes."""
         return self._max_packet_size
 
     @property
     def interval(self) -> int:
+        """The expected polling interval of an endpoint. If the device is low-speed or full-speed,
+        the interval is in increments of 1ms. If the device is high-speed, the interval can be
+        calculated using the formula: "2^(interval-1) * 125 µs".
+        """
         return self._interval
 
     @property
     def input(self) -> bool:
+        """Whether or not this endpoint is used for input data."""
         return bool(self._address & 0x80)
 
     @property
     def output(self) -> bool:
+        """Whether or not this endpoint is used for output data."""
         return not self.input
 
     def __str__(self):
@@ -94,6 +121,13 @@ class EndpointDescriptor(Descriptor):
 
 
 class InterfaceDescriptor(Descriptor):
+    """Parse the provided interface descriptor. This class should only be instantiated by
+    :class:`ConfigurationDescriptor`.
+
+    :param descriptor: The interface descriptor data to parse.
+    :type descriptor: `bytearray`
+    """
+
     def __init__(self, descriptor: bytearray):
         super().__init__(descriptor, 9, adafruit_usb_host_descriptors.DESC_INTERFACE)
         self._index = descriptor[2]
@@ -103,31 +137,37 @@ class InterfaceDescriptor(Descriptor):
         self._protocol = descriptor[7]
         self._endpoints = []
 
-    def append_endpoint(self, descriptor: bytearray) -> None:
+    def _append_endpoint(self, descriptor: bytearray) -> None:
         self._endpoints.append(EndpointDescriptor(descriptor))
 
     @property
     def index(self) -> int:
+        """The number of the interface in the usb device configuration."""
         return self._index
 
     @property
     def interface_class(self) -> int:
+        """The class specification of the interface."""
         return self._interface_class
 
     @property
     def interface_subclass(self) -> int:
+        """The subclass specification of the interface."""
         return self._interface_subclass
 
     @property
     def protocol(self) -> int:
+        """The interface protocol."""
         return self._protocol
 
     @property
     def endpoints(self) -> tuple:
+        """A `tuple` of the descriptors for the endpoints utilized by this interface."""
         return tuple(self._endpoints)
 
     @property
     def in_endpoint(self) -> EndpointDescriptor:
+        """The first endpoint designated as an input within the interface."""
         try:
             return next(x for x in self._endpoints if x.input)
         except StopIteration:
@@ -135,12 +175,14 @@ class InterfaceDescriptor(Descriptor):
 
     @property
     def out_endpoint(self) -> EndpointDescriptor:
+        """The first endpoint designated as an output within the interface."""
         try:
             return next(x for x in self._endpoints if x.output)
         except StopIteration:
             return None
 
     def get_class_identifier(self) -> tuple:
+        """A `tuple` containing the class and subclass of the interface."""
         return (self._interface_class, self._interface_subclass)
 
     def __str__(self):
@@ -155,6 +197,15 @@ class InterfaceDescriptor(Descriptor):
 
 
 class ConfigurationDescriptor(Descriptor):
+    """Fetch and parse the specified configuration descriptor and its interface and endpoint
+    descriptors from a device.
+
+    :param device: The USB device to fetch descriptors from.
+    :type device: :class:`usb.core.Device`
+    :param configuration: The zero-based index of the device configuration to fetch. Defaults to 0.
+    :type configuration: `int`, optional
+    """
+
     def __init__(self, device: usb.core.Device, configuration: int = 0):
         config_descriptor = adafruit_usb_host_descriptors.get_configuration_descriptor(
             device, configuration
@@ -182,7 +233,7 @@ class ConfigurationDescriptor(Descriptor):
                 descriptor_type == adafruit_usb_host_descriptors.DESC_ENDPOINT
                 and interface_index is not None
             ):
-                self._interfaces[interface_index].append_endpoint(descriptor)
+                self._interfaces[interface_index]._append_endpoint(descriptor)
 
             i += descriptor_len
 
@@ -190,17 +241,27 @@ class ConfigurationDescriptor(Descriptor):
 
     @property
     def value(self) -> int:
+        """The configuration value which indicates the number for the configuration defined in the
+        firmware of the device.
+        """
         return self._value
 
     @property
     def max_power(self) -> int:
+        """The maximimum power in milliamps that the device can draw from the host."""
         return self._max_power * 2  # units are 2 mA
 
     @property
     def interfaces(self) -> tuple:
+        """A `tuple` of the descriptors for the interfaces utilized by this configuration."""
         return self._interfaces
 
     def get_class_identifier(self, interface: int = 0):
+        """A `tuple` containing the class and subclass of an interface within this configuration.
+
+        :param interface: The index of the desired interface. Defaults to 0.
+        :type interface: `int`, optional
+        """
         return self._interfaces[interface].get_class_identifier()
 
     def __str__(self):
@@ -214,6 +275,12 @@ class ConfigurationDescriptor(Descriptor):
 
 
 class DeviceDescriptor:
+    """Fetch and parse all device, configuration, interface, and endpoint descriptors.
+
+    :param device: The USB device to fetch descriptors from.
+    :type device: :class:`usb.core.Device`
+    """
+
     def __init__(self, device: usb.core.Device):
         descriptor = adafruit_usb_host_descriptors.get_device_descriptor(device)
         self._device_class = descriptor[4]
@@ -227,25 +294,40 @@ class DeviceDescriptor:
 
     @property
     def device_class(self) -> int:
+        """The class specification of the device."""
         return self._device_class
 
     @property
     def device_subclass(self) -> int:
+        """The subclass specification of the device."""
         return self._device_subclass
 
     @property
     def protocol(self) -> int:
+        """The device protocol."""
         return self._protocol
 
     @property
     def max_packet_size(self) -> int:
+        """The maximum expected packet size of a report from the default endpoint in bytes."""
         return self._max_packet_size
 
     @property
     def configurations(self) -> tuple:
+        """A `tuple` of the descriptors for the configurations as :class:`ConfigurationDescriptor`
+        objects offered by this device."""
         return self._configurations
 
     def get_class_identifier(self, configuration: int = 0, interface: int = 0) -> tuple:
+        """A `tuple` of 4 `int` elements containing the class and subclass of this device as well as
+        the class and subclass of the designated configuration and interface.
+
+        :param configuration: The index of the desired device configuration. Defaults to 0.
+        :type configuration: `int`, optional
+        :param interface: The index of the desired interface within the configuration.
+            Defaults to 0.
+        :type interface: `int`, optional
+        """
         return (self.device_class, self.device_subclass) + self._configurations[
             configuration
         ].get_class_identifier(interface)
