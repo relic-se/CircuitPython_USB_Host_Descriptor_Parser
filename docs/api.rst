@@ -7,5 +7,5 @@
 API Reference
 #############
 
-.. automodule:: usb_host_descriptor_parser
+.. automodule:: relic_usb_host_descriptor_parser
     :members:

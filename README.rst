@@ -82,7 +82,7 @@ following command to install:
 
 .. code-block:: shell
 
-    circup install usb_host_descriptor_parser
+    circup install relic_usb_host_descriptor_parser
 
 Or the following command to update an existing version:
 

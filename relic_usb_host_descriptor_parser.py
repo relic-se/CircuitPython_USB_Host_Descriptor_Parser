@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: MIT
 """
-`usb_host_descriptor_parser`
+`relic_usb_host_descriptor_parser`
 ================================================================================
 
 Helper to parse USB descriptors

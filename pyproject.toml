@@ -24,7 +24,7 @@ keywords = [
     "blinka",
     "circuitpython",
     "micropython",
-    "usb_host_descriptor_parser",
+    "relic_usb_host_descriptor_parser",
     "usb",
     "host",
     "descriptor",
@@ -44,7 +44,7 @@ dynamic = ["dependencies", "optional-dependencies"]
 [tool.setuptools]
 # TODO: IF LIBRARY FILES ARE A PACKAGE FOLDER,
 #       CHANGE `py_modules = ['...']` TO `packages = ['...']`
-py-modules = ["usb_host_descriptor_parser"]
+py-modules = ["relic_usb_host_descriptor_parser"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
