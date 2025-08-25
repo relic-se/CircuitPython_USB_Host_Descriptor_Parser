@@ -42,8 +42,6 @@ classifiers = [
 dynamic = ["dependencies", "optional-dependencies"]
 
 [tool.setuptools]
-# TODO: IF LIBRARY FILES ARE A PACKAGE FOLDER,
-#       CHANGE `py_modules = ['...']` TO `packages = ['...']`
 py-modules = ["relic_usb_host_descriptor_parser"]
 
 [tool.setuptools.dynamic]
