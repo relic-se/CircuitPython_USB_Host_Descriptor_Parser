@@ -52,7 +52,7 @@ class Descriptor:
 
     def __init__(self, descriptor: bytearray, length: int = None, descriptor_type: int = None):
         if (
-            (length is not None and len(descriptor) != length)
+            (length is not None and len(descriptor) < length)
             or descriptor[0] != len(descriptor)
             or (descriptor_type is not None and descriptor[1] != descriptor_type)
         ):
