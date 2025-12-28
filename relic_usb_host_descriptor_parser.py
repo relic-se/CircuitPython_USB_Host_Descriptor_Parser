@@ -120,6 +120,83 @@ class EndpointDescriptor(Descriptor):
         )
 
 
+class HIDDescriptor(Descriptor):
+    """Parse the provided HID descriptor. This class should only be instantiated by
+    :class:`ConfigurationDescriptor`.
+
+    :param descriptor: The HID descriptor data to parse.
+    :type descriptor: `bytearray`
+    """
+
+    def __init__(self, descriptor: bytearray, device: usb.core.Device, interface: int = 0):
+        super().__init__(descriptor, 9, adafruit_usb_host_descriptors.DESC_HID)
+        self._country = descriptor[4]
+        self._count = descriptor[5]
+        self._report_type = descriptor[6]
+        self._report_length = (descriptor[8] << 8) | descriptor[7]
+
+        # read usage id from report descriptor
+        report_descriptor = adafruit_usb_host_descriptors.get_report_descriptor(
+            device, interface, self._report_length
+        )
+        self._usage_page_id = None
+        self._usage_id = None
+        i = 0
+        while i < len(report_descriptor):
+            tag, value = report_descriptor[i : i + 2]
+            i += 2
+            if (
+                tag == adafruit_usb_host_descriptors.HID_TAG_USAGE_PAGE
+                and self._usage_page_id is None
+            ):
+                self._usage_page_id = value
+            elif tag == adafruit_usb_host_descriptors.HID_TAG_USAGE and self._usage_id is None:
+                self._usage_id = value
+                break
+
+    @property
+    def country(self) -> int:
+        """The country of the HID descriptor."""
+        return self._country
+
+    @property
+    def count(self) -> int:
+        """The count of the HID descriptor."""
+        return self._count
+
+    @property
+    def report_type(self) -> int:
+        """The type of the HID report descriptor."""
+        return self._report_type
+
+    @property
+    def report_length(self) -> int:
+        """The length of the HID report derscriptor."""
+        return self._report_length
+
+    @property
+    def usage_page_id(self) -> int:
+        """The ID of the first HID usage page."""
+        return self._usage_page_id
+
+    @property
+    def usage_id(self) -> int:
+        """The ID of the first HID usage."""
+        return self._usage_id
+
+    def __str__(self):
+        return str(
+            {
+                "country": hex(self._country),
+                "count": hex(self._count),
+                "report_type": hex(self._report_type),
+                "report_length": self._report_length,
+                "usage_page_id": self._usage_page_id,
+                "usage_id": self._usage_id,
+            }
+        )
+
+
 class InterfaceDescriptor(Descriptor):
     """Parse the provided interface descriptor. This class should only be instantiated by
     :class:`ConfigurationDescriptor`.
@@ -136,6 +213,7 @@ class InterfaceDescriptor(Descriptor):
         self._interface_subclass = descriptor[6]
         self._protocol = descriptor[7]
         self._endpoints = []
+        self._hid_descriptor = None
 
     def _append_endpoint(self, descriptor: bytearray) -> None:
         self._endpoints.append(EndpointDescriptor(descriptor))
@@ -180,6 +258,12 @@ class InterfaceDescriptor(Descriptor):
             return next(x for x in self._endpoints if x.output)
         except StopIteration:
             return None
+
+    @property
+    def hid_descriptor(self) -> HIDDescriptor:
+        """The HID descriptor of the interface if it is an HID-compliant interface. Otherwise,
+        this property will be `None`."""
+        return self._hid_descriptor
 
     def get_class_identifier(self) -> tuple:
         """A `tuple` containing the class and subclass of the interface."""
@@ -228,6 +312,15 @@ class ConfigurationDescriptor(Descriptor):
             elif descriptor_type == adafruit_usb_host_descriptors.DESC_INTERFACE:
                 interface_index = len(self._interfaces)
                 self._interfaces.append(InterfaceDescriptor(descriptor))
+
+            elif (
+                descriptor_type == adafruit_usb_host_descriptors.DESC_HID
+                and self._interfaces[interface_index].interface_class
+                == adafruit_usb_host_descriptors.INTERFACE_HID
+            ):
+                self._interfaces[interface_index]._hid_descriptor = HIDDescriptor(
+                    descriptor, device, interface_index
+                )
 
             elif (
                 descriptor_type == adafruit_usb_host_descriptors.DESC_ENDPOINT
