@@ -25,6 +25,7 @@ keywords = [
     "circuitpython",
     "micropython",
     "relic_usb_host_descriptor_parser",
+    "adafruit_usb_host_descriptors",
     "usb",
     "host",
     "descriptor",
@@ -42,7 +43,7 @@ classifiers = [
 dynamic = ["dependencies", "optional-dependencies"]
 
 [tool.setuptools]
-py-modules = ["relic_usb_host_descriptor_parser"]
+packages = ["relic_usb_host_descriptor_parser"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
