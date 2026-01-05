@@ -37,6 +37,8 @@ __repo__ = "https://github.com/relic-se/CircuitPython_USB_Host_Descriptor_Parser
 import adafruit_usb_host_descriptors
 import usb.core
 
+from relic_usb_host_descriptor_parser.hid_report import HIDReportDescriptor
+
 
 class Descriptor:
     """The base class of a descriptor parser. Validates descriptor data length and type. The
@@ -134,25 +136,9 @@ class HIDDescriptor(Descriptor):
         self._count = descriptor[5]
         self._report_type = descriptor[6]
         self._report_length = (descriptor[8] << 8) | descriptor[7]
-
-        # read usage id from report descriptor
-        report_descriptor = adafruit_usb_host_descriptors.get_report_descriptor(
+        self._report_descriptor = HIDReportDescriptor(adafruit_usb_host_descriptors.get_report_descriptor(
             device, interface, self._report_length
-        )
-        self._usage_page_id = None
-        self._usage_id = None
-        i = 0
-        while i < len(report_descriptor):
-            tag, value = report_descriptor[i : i + 2]
-            i += 2
-            if (
-                tag == adafruit_usb_host_descriptors.HID_TAG_USAGE_PAGE
-                and self._usage_page_id is None
-            ):
-                self._usage_page_id = value
-            elif tag == adafruit_usb_host_descriptors.HID_TAG_USAGE and self._usage_id is None:
-                self._usage_id = value
-                break
+        ))
 
     @property
     def country(self) -> int:
@@ -177,12 +163,18 @@ class HIDDescriptor(Descriptor):
     @property
     def usage_page_id(self) -> int:
         """The ID of the first HID usage page."""
-        return self._usage_page_id
+        # TODO: use `self._report_descriptor`
+        return None
 
     @property
     def usage_id(self) -> int:
         """The ID of the first HID usage."""
-        return self._usage_id
+        # TODO: use `self._report_descriptor`
+        return None
+
+    def get_usage_identifier(self) -> tuple:
+        """A `tuple` containing the first usage page id and first usage id of the hid report."""
+        return (self.usage_page_id, self.usage_id)
 
     def __str__(self):
         return str(
@@ -191,8 +183,8 @@ class HIDDescriptor(Descriptor):
                 "count": hex(self._count),
                 "report_type": hex(self._report_type),
                 "report_length": self._report_length,
-                "usage_page_id": self._usage_page_id,
-                "usage_id": self._usage_id,
+                "usage_page_id": self.usage_page_id,
+                "usage_id": self.usage_id,
             }
         )
 
